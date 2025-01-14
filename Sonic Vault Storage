@@ -1,0 +1,147 @@
+import math
+import time
+import numpy as np
+from decimal import Decimal, getcontext
+
+class MathQuery:
+    def __init__(self, bit_size= 9_410_000):
+        self.bit_size = bit_size
+        self.quantum_states = np.zeros(bit_size, dtype=np.int8)
+        self.query_buffer = []
+        
+    def compute_quantum_state(self, index, power_value):
+        state = (power_value * self.bit_size) % 2
+        self.quantum_states[index] = state
+        return state
+        
+    def execute_query(self, power_distribution, is_disabled):
+        if not is_disabled:
+            return None
+            
+        query_result = 0
+        for i in range(min(len(power_distribution), self.bit_size)):
+            state = self.compute_quantum_state(i, power_distribution[i])
+            query_result += state * (2 ** (i % 32))  
+            
+        self.query_buffer.append(query_result)
+        return query_result
+        
+    def get_query_status(self):
+        return {
+            'active_bits': np.count_nonzero(self.quantum_states),
+            'buffer_size': len(self.query_buffer),
+            'last_query': self.query_buffer[-1] if self.query_buffer else None
+        }
+
+class SonicVaultStorage:
+    def __init__(self):
+        self.max_math_floor = 2
+        self.tolerance_base = Decimal('1.40000')
+        self.hertz_interval = Decimal('0.0000010')
+        self.power_constant = 14
+        self.math_query = MathQuery()
+        getcontext().prec = 10
+
+    def calculate_power_distribution(self, sonic_value):
+        power_fraction = Decimal('2.625') / Decimal('11')
+        base_power = self.power_constant - power_fraction
+        return float(base_power * sonic_value)
+
+    def generate_hertz_sequence(self, start_time):
+        current_time = Decimal(str(time.time() - start_time))
+        return math.floor(1 / float(self.hertz_interval)) if current_time >= self.hertz_interval else None
+
+    def process_transaction(self, sender, receiver, amount, is_printing_disabled=True):
+        start_time = time.time()
+        sonic_values = []
+        power_distribution = []
+        
+        
+        for i in range(18, 47):
+            if math.floor(i / self.math_query.bit_size * 2) <= self.max_math_floor:
+                power = self.calculate_power_distribution(i)
+                power_distribution.append(power)
+                
+                hertz = self.generate_hertz_sequence(start_time)
+                if hertz:
+                    tolerance = Decimal(str(power)) * self.tolerance_base / 100
+                    
+                    
+                    query_result = self.math_query.execute_query(
+                        power_distribution=power_distribution,
+                        is_disabled=is_printing_disabled
+                    )
+                    
+                    sonic_values.append({
+                        'index': i,
+                        'power': power,
+                        'hertz': hertz,
+                        'tolerance': float(tolerance),
+                        'math_query': {
+                            'value': query_result,
+                            'quantum_state': self.math_query.quantum_states[i-18] if query_result is not None else None
+                        }
+                    })
+
+        query_status = self.math_query.get_query_status()
+        
+        return {
+            'transaction': {
+                'sender': sender,
+                'receiver': receiver,
+                'amount': amount,
+                'timestamp': start_time
+            },
+            'sonic_vault': {
+                'values': sonic_values,
+                'total_power': sum(v['power'] for v in sonic_values),
+                'average_hertz': sum(v['hertz'] for v in sonic_values) / len(sonic_values) if sonic_values else 0,
+                'system_tolerance': float(self.tolerance_base)
+            },
+            'math_query': {
+                'status': 'Active' if is_printing_disabled else 'Inactive',
+                'bit_size': self.math_query.bit_size,
+                'active_bits': query_status['active_bits'],
+                'buffer_size': query_status['buffer_size'],
+                'last_query': query_status['last_query']
+            }
+        }
+
+def execute_qubic_transfer():
+    vault = SonicVaultStorage()
+    
+    transaction = vault.process_transaction(
+        sender="Alice",
+        receiver="Bob",
+        amount=1_000_000,
+        is_printing_disabled=True
+    )
+    
+    print("Transaction Details:")
+    print(f"Sender: {transaction['transaction']['sender']}")
+    print(f"Receiver: {transaction['transaction']['receiver']}")
+    print(f"Amount: {transaction['transaction']['amount']:,} Qubic")
+    
+    print("\nSonic Vault Metrics:")
+    print(f"Total Power Consumption: {transaction['sonic_vault']['total_power']:.4f} units")
+    print(f"Average Hertz: {transaction['sonic_vault']['average_hertz']:.2f} Hz")
+    print(f"System Tolerance: {transaction['sonic_vault']['system_tolerance']}%")
+    
+    print("\nMath.Query Status:")
+    print(f"Status: {transaction['math_query']['status']}")
+    print(f"Bit Size: {transaction['math_query']['bit_size']:,} bits")
+    print(f"Active Bits: {transaction['math_query']['active_bits']:,}")
+    print(f"Buffer Size: {transaction['math_query']['buffer_size']}")
+    print(f"Last Query Result: {transaction['math_query']['last_query']}")
+    
+    print("\nDetailed Sonic Values:")
+    for value in transaction['sonic_vault']['values'][:5]:
+        print(f"Index {value['index']}:")
+        print(f"  Power: {value['power']:.4f}")
+        print(f"  Hertz: {value['hertz']}")
+        print(f"  Tolerance: {value['tolerance']:.6f}%")
+        print(f"  Math.Query Value: {value['math_query']['value']}")
+        print(f"  Quantum State: {value['math_query']['quantum_state']}")
+
+if __name__ == "__main__":
+    execute_qubic_transfer()
