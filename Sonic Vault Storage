@@ -97,7 +97,7 @@ class SonicVaultStorage:
         start_time = time.time()
         quantum_values = []
         
-        for i in range(18, 47):
+        for i in range(18, 48):
             if math.floor(i / 9_410_000 * 2) <= self.max_math_floor:
                 absorption = self.quantum_absorber.calculate_absorption(i)
                 
