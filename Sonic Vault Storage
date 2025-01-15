@@ -2,88 +2,118 @@ import math
 import time
 import numpy as np
 from decimal import Decimal, getcontext
+import os
+import sys
+from contextlib import contextmanager
+from typing import Dict, List, Any
 
-class MathQuery:
-    def __init__(self, bit_size= 9_410_000):
-        self.bit_size = bit_size
-        self.quantum_states = np.zeros(bit_size, dtype=np.int8)
-        self.query_buffer = []
+class QuantumAbsorber:
+    def __init__(self):
+        self.fraction_power = Decimal('2.625')  # 14 - (²⅝ ÷ ¡¹) X = X
+        self.energy_drain = Decimal('3.125')
         
-    def compute_quantum_state(self, index, power_value):
-        state = (power_value * self.bit_size) % 2
-        self.quantum_states[index] = state
-        return state
-        
-    def execute_query(self, power_distribution, is_disabled):
-        if not is_disabled:
-            return None
-            
-        query_result = 0
-        for i in range(min(len(power_distribution), self.bit_size)):
-            state = self.compute_quantum_state(i, power_distribution[i])
-            query_result += state * (2 ** (i % 32))  
-            
-        self.query_buffer.append(query_result)
-        return query_result
-        
-    def get_query_status(self):
+    def calculate_absorption(self, quantum_value: float) -> Dict[str, float]:
+        power_absorbed = float(self.fraction_power * quantum_value / 11)
+        energy_used = float(self.energy_drain * quantum_value / 11)
         return {
-            'active_bits': np.count_nonzero(self.quantum_states),
-            'buffer_size': len(self.query_buffer),
-            'last_query': self.query_buffer[-1] if self.query_buffer else None
+            'power_absorbed': power_absorbed,
+            'energy_used': energy_used
         }
+
+class PrintControl:
+    def __init__(self):
+        self._original_stdout = sys.stdout
+        self._null_device = open(os.devnull, 'w')
+        self._is_disabled = False
+        
+    def disable(self):
+        if not self._is_disabled:
+            sys.stdout = self._null_device
+            self._is_disabled = True
+            
+    def enable(self):
+        if self._is_disabled:
+            sys.stdout = self._original_stdout
+            self._is_disabled = False
+            
+    def __del__(self):
+        self._null_device.close()
+
+class HertzDistributor:
+    def __init__(self):
+        self.hertz_value = Decimal('0.0000010')
+        self.power_distribution = Decimal('1.40000')
+        
+    def calculate_distribution(self, time_elapsed: float) -> Dict[str, float]:
+        hertz_effect = float(1 / self.hertz_value) if time_elapsed > 0 else 0
+        power_cost = float(self.power_distribution)  # Represented as percentage
+        return {
+            'hertz': hertz_effect,
+            'power_percentage': power_cost
+        }
+
+class QuantumStateController:
+    def __init__(self, max_state: int = 1):
+        self.max_state = max_state
+        self._states = []
+        
+    def validate_state(self, state: int) -> bool:
+        return 0 <= state <= self.max_state
+        
+    def add_state(self, state: int) -> bool:
+        if self.validate_state(state):
+            self._states.append(state)
+            return True
+        return False
 
 class SonicVaultStorage:
     def __init__(self):
+        self.print_control = PrintControl()
+        self.quantum_absorber = QuantumAbsorber()
+        self.hertz_distributor = HertzDistributor()
+        self.state_controller = QuantumStateController()
         self.max_math_floor = 2
-        self.tolerance_base = Decimal('1.40000')
-        self.hertz_interval = Decimal('0.0000010')
-        self.power_constant = 14
-        self.math_query = MathQuery()
         getcontext().prec = 10
-
-    def calculate_power_distribution(self, sonic_value):
-        power_fraction = Decimal('2.625') / Decimal('11')
-        base_power = self.power_constant - power_fraction
-        return float(base_power * sonic_value)
-
-    def generate_hertz_sequence(self, start_time):
-        current_time = Decimal(str(time.time() - start_time))
-        return math.floor(1 / float(self.hertz_interval)) if current_time >= self.hertz_interval else None
-
-    def process_transaction(self, sender, receiver, amount, is_printing_disabled=True):
-        start_time = time.time()
-        sonic_values = []
-        power_distribution = []
+        self._is_active = False
         
+    def activate(self):
+        if not self._is_active:
+            self._is_active = True
+            self.print_control.disable()
+            return True
+        return False
+        
+    def deactivate(self):
+        if self._is_active:
+            self._is_active = False
+            self.print_control.enable()
+            return True
+        return False
+        
+    def process_quantum_transaction(self, sender: str, receiver: str, amount: int) -> Dict[str, Any]:
+        if not self._is_active:
+            raise RuntimeError("Sonic Vault Storage must be activated before processing transactions")
+            
+        start_time = time.time()
+        quantum_values = []
         
         for i in range(18, 47):
-            if math.floor(i / self.math_query.bit_size * 2) <= self.max_math_floor:
-                power = self.calculate_power_distribution(i)
-                power_distribution.append(power)
+            if math.floor(i / 9_410_000 * 2) <= self.max_math_floor:
+                absorption = self.quantum_absorber.calculate_absorption(i)
                 
-                hertz = self.generate_hertz_sequence(start_time)
-                if hertz:
-                    tolerance = Decimal(str(power)) * self.tolerance_base / 100
-                    
-                    
-                    query_result = self.math_query.execute_query(
-                        power_distribution=power_distribution,
-                        is_disabled=is_printing_disabled
-                    )
-                    
-                    sonic_values.append({
+                
+                time_elapsed = time.time() - start_time
+                distribution = self.hertz_distributor.calculate_distribution(time_elapsed)
+                
+                
+                quantum_state = int((absorption['power_absorbed'] * distribution['hertz']) % 2)
+                if self.state_controller.add_state(quantum_state):
+                    quantum_values.append({
                         'index': i,
-                        'power': power,
-                        'hertz': hertz,
-                        'tolerance': float(tolerance),
-                        'math_query': {
-                            'value': query_result,
-                            'quantum_state': self.math_query.quantum_states[i-18] if query_result is not None else None
-                        }
+                        'absorption': absorption,
+                        'distribution': distribution,
+                        'quantum_state': quantum_state
                     })
-
-        query_status = self.math_query.get_query_status()
         
         return {
             'transaction': {
@@ -92,56 +122,65 @@ class SonicVaultStorage:
                 'amount': amount,
                 'timestamp': start_time
             },
-            'sonic_vault': {
-                'values': sonic_values,
-                'total_power': sum(v['power'] for v in sonic_values),
-                'average_hertz': sum(v['hertz'] for v in sonic_values) / len(sonic_values) if sonic_values else 0,
-                'system_tolerance': float(self.tolerance_base)
-            },
-            'math_query': {
-                'status': 'Active' if is_printing_disabled else 'Inactive',
-                'bit_size': self.math_query.bit_size,
-                'active_bits': query_status['active_bits'],
-                'buffer_size': query_status['buffer_size'],
-                'last_query': query_status['last_query']
+            'quantum_metrics': {
+                'values': quantum_values,
+                'total_power_absorbed': sum(v['absorption']['power_absorbed'] for v in quantum_values),
+                'total_energy_used': sum(v['absorption']['energy_used'] for v in quantum_values),
+                'average_hertz': sum(v['distribution']['hertz'] for v in quantum_values) / len(quantum_values) if quantum_values else 0,
+                'power_distribution_percentage': float(self.hertz_distributor.power_distribution)
             }
         }
 
-def execute_qubic_transfer():
+def execute_quantum_transaction():
     vault = SonicVaultStorage()
     
-    transaction = vault.process_transaction(
-        sender="Alice",
-        receiver="Bob",
-        amount=1_000_000,
-        is_printing_disabled=True
-    )
+    try:
+        vault.activate()
+        
+        transaction = vault.process_quantum_transaction(
+            sender="Alice",
+            receiver="Bob",
+            amount=1_000_000
+        )
+        
+        
+        results = {
+            'status': 'success',
+            'data': transaction
+        }
+        
+    except Exception as e:
+        results = {
+            'status': 'failed',
+            'error': str(e)
+        }
+    finally:
+        vault.deactivate()
+        
     
-    print("Transaction Details:")
-    print(f"Sender: {transaction['transaction']['sender']}")
-    print(f"Receiver: {transaction['transaction']['receiver']}")
-    print(f"Amount: {transaction['transaction']['amount']:,} Qubic")
-    
-    print("\nSonic Vault Metrics:")
-    print(f"Total Power Consumption: {transaction['sonic_vault']['total_power']:.4f} units")
-    print(f"Average Hertz: {transaction['sonic_vault']['average_hertz']:.2f} Hz")
-    print(f"System Tolerance: {transaction['sonic_vault']['system_tolerance']}%")
-    
-    print("\nMath.Query Status:")
-    print(f"Status: {transaction['math_query']['status']}")
-    print(f"Bit Size: {transaction['math_query']['bit_size']:,} bits")
-    print(f"Active Bits: {transaction['math_query']['active_bits']:,}")
-    print(f"Buffer Size: {transaction['math_query']['buffer_size']}")
-    print(f"Last Query Result: {transaction['math_query']['last_query']}")
-    
-    print("\nDetailed Sonic Values:")
-    for value in transaction['sonic_vault']['values'][:5]:
-        print(f"Index {value['index']}:")
-        print(f"  Power: {value['power']:.4f}")
-        print(f"  Hertz: {value['hertz']}")
-        print(f"  Tolerance: {value['tolerance']:.6f}%")
-        print(f"  Math.Query Value: {value['math_query']['value']}")
-        print(f"  Quantum State: {value['math_query']['quantum_state']}")
+    if results['status'] == 'success':
+        data = results['data']
+        print("\nTransaction Details:")
+        print(f"Sender: {data['transaction']['sender']}")
+        print(f"Receiver: {data['transaction']['receiver']}")
+        print(f"Amount: {data['transaction']['amount']:,}")
+        
+        print("\nQuantum Metrics:")
+        metrics = data['quantum_metrics']
+        print(f"Total Power Absorbed: {metrics['total_power_absorbed']:.4f}")
+        print(f"Total Energy Used: {metrics['total_energy_used']:.4f}")
+        print(f"Average Hertz: {metrics['average_hertz']:.7f}")
+        print(f"Power Distribution: {metrics['power_distribution_percentage']}%")
+        
+        print("\nDetailed Quantum Values:")
+        for value in metrics['values'][:5]:
+            print(f"\nIndex {value['index']}:")
+            print(f"  Absorption Power: {value['absorption']['power_absorbed']:.4f}")
+            print(f"  Energy Drain: {value['absorption']['energy_used']:.4f}")
+            print(f"  Hertz Effect: {value['distribution']['hertz']:.7f}")
+            print(f"  Quantum State: {value['quantum_state']}")
+    else:
+        print(f"Transaction failed: {results['error']}")
 
 if __name__ == "__main__":
-    execute_qubic_transfer()
+    execute_quantum_transaction()
