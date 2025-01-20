@@ -7,113 +7,101 @@ import sys
 from contextlib import contextmanager
 from typing import Dict, List, Any
 
-class QuantumAbsorber:
+class PowerDistributor:
     def __init__(self):
-        self.fraction_power = Decimal('2.625')  # 14 - (²⅝ ÷ ¡¹) X = X
-        self.energy_drain = Decimal('3.125')
+        self.power_distribution = Decimal('400.00')
+        self._efficiency_factor = Decimal('0.95')
         
-    def calculate_absorption(self, quantum_value: float) -> Dict[str, float]:
-        power_absorbed = float(self.fraction_power * quantum_value / 11)
-        energy_used = float(self.energy_drain * quantum_value / 11)
+    def calculate_power_output(self, input_power: float) -> Dict[str, float]:
+        distributed_power = float(self.power_distribution * self._efficiency_factor)
         return {
-            'power_absorbed': power_absorbed,
-            'energy_used': energy_used
+            'distributed_power': distributed_power,
+            'efficiency': float(self._efficiency_factor * 100)
         }
 
-class PrintControl:
-    def __init__(self):
-        self._original_stdout = sys.stdout
-        self._null_device = open(os.devnull, 'w')
-        self._is_disabled = False
-        
-    def disable(self):
-        if not self._is_disabled:
-            sys.stdout = self._null_device
-            self._is_disabled = True
-            
-    def enable(self):
-        if self._is_disabled:
-            sys.stdout = self._original_stdout
-            self._is_disabled = False
-            
-    def __del__(self):
-        self._null_device.close()
-
-class HertzDistributor:
+class HertzController:
     def __init__(self):
         self.hertz_value = Decimal('0.0000010')
-        self.power_distribution = Decimal('1.40000')
+        self.frequency_stability = Decimal('0.9999')
         
-    def calculate_distribution(self, time_elapsed: float) -> Dict[str, float]:
-        hertz_effect = float(1 / self.hertz_value) if time_elapsed > 0 else 0
-        power_cost = float(self.power_distribution)  # Represented as percentage
+    def calculate_frequency(self, time_delta: float) -> Dict[str, float]:
+        base_frequency = float(1 / self.hertz_value)
+        stability_factor = float(self.frequency_stability)
         return {
-            'hertz': hertz_effect,
-            'power_percentage': power_cost
+            'frequency': base_frequency * stability_factor,
+            'stability': stability_factor * 100
+        }
+
+class FractionPowerModule:
+    def __init__(self):
+        # 2.625 Fraction Power
+        self.fraction_power = Decimal('2.625')
+        self.power_coefficient = Decimal('2.1')
+        
+    def calculate_power(self, input_value: float) -> Dict[str, float]:
+        fraction_output = float(self.fraction_power * self.power_coefficient)
+        normalized_power = fraction_output / 11.0
+        return {
+            'fraction_power': fraction_output,
+            'normalized_power': normalized_power
         }
 
 class QuantumStateController:
     def __init__(self, max_state: int = 1):
         self.max_state = max_state
         self._states = []
+        self.power_distributor = PowerDistributor()
+        self.hertz_controller = HertzController()
+        self.fraction_module = FractionPowerModule()
         
-    def validate_state(self, state: int) -> bool:
-        return 0 <= state <= self.max_state
+    def process_quantum_state(self, time_elapsed: float, input_power: float) -> Dict[str, Any]:
+        # Calculate all components
+        power_distribution = self.power_distributor.calculate_power_output(input_power)
+        hertz_metrics = self.hertz_controller.calculate_frequency(time_elapsed)
+        fraction_metrics = self.fraction_module.calculate_power(input_power)
         
-    def add_state(self, state: int) -> bool:
-        if self.validate_state(state):
-            self._states.append(state)
-            return True
-        return False
+        # Integrate results
+        quantum_state = int((power_distribution['distributed_power'] * 
+                           hertz_metrics['frequency'] * 
+                           fraction_metrics['fraction_power']) % 7)
+        
+        return {
+            'state': quantum_state,
+            'metrics': {
+                'power_distribution': power_distribution,
+                'hertz_metrics': hertz_metrics,
+                'fraction_metrics': fraction_metrics
+            }
+        }
 
-class SonicVaultStorage:
+class EnhancedSonicVaultStorage:
     def __init__(self):
-        self.print_control = PrintControl()
-        self.quantum_absorber = QuantumAbsorber()
-        self.hertz_distributor = HertzDistributor()
         self.state_controller = QuantumStateController()
         self.max_math_floor = 2
         getcontext().prec = 10
         self._is_active = False
         
-    def activate(self):
+    def process_transaction(self, sender: str, receiver: str, amount: int) -> Dict[str, Any]:
         if not self._is_active:
-            self._is_active = True
-            self.print_control.disable()
-            return True
-        return False
-        
-    def deactivate(self):
-        if self._is_active:
-            self._is_active = False
-            self.print_control.enable()
-            return True
-        return False
-        
-    def process_quantum_transaction(self, sender: str, receiver: str, amount: int) -> Dict[str, Any]:
-        if not self._is_active:
-            raise RuntimeError("Sonic Vault Storage must be activated before processing transactions")
+            raise RuntimeError("System must be activated before processing")
             
         start_time = time.time()
         quantum_values = []
         
         for i in range(18, 48):
             if math.floor(i / 9_410_000 * 2) <= self.max_math_floor:
-                absorption = self.quantum_absorber.calculate_absorption(i)
-                
-                
                 time_elapsed = time.time() - start_time
-                distribution = self.hertz_distributor.calculate_distribution(time_elapsed)
                 
+                state_results = self.state_controller.process_quantum_state(
+                    time_elapsed=time_elapsed,
+                    input_power=float(i)
+                )
                 
-                quantum_state = int((absorption['power_absorbed'] * distribution['hertz']) % 2)
-                if self.state_controller.add_state(quantum_state):
-                    quantum_values.append({
-                        'index': i,
-                        'absorption': absorption,
-                        'distribution': distribution,
-                        'quantum_state': quantum_state
-                    })
+                quantum_values.append({
+                    'index': i,
+                    'quantum_state': state_results['state'],
+                    'metrics': state_results['metrics']
+                })
         
         return {
             'transaction': {
@@ -124,63 +112,51 @@ class SonicVaultStorage:
             },
             'quantum_metrics': {
                 'values': quantum_values,
-                'total_power_absorbed': sum(v['absorption']['power_absorbed'] for v in quantum_values),
-                'total_energy_used': sum(v['absorption']['energy_used'] for v in quantum_values),
-                'average_hertz': sum(v['distribution']['hertz'] for v in quantum_values) / len(quantum_values) if quantum_values else 0,
-                'power_distribution_percentage': float(self.hertz_distributor.power_distribution)
+                'power_distribution_percentage': float(self.state_controller.power_distributor.power_distribution),
+                'hertz_precision': float(self.state_controller.hertz_controller.hertz_value),
+                'fraction_power': float(self.state_controller.fraction_module.fraction_power)
             }
         }
+        
+    def activate(self):
+        self._is_active = True
+        
+    def deactivate(self):
+        self._is_active = False
 
-def execute_quantum_transaction():
-    vault = SonicVaultStorage()
+def execute_enhanced_transaction():
+    vault = EnhancedSonicVaultStorage()
     
     try:
         vault.activate()
-        
-        transaction = vault.process_quantum_transaction(
+        transaction = vault.process_transaction(
             sender="Alice",
             receiver="Bob",
             amount=1_000_000
         )
         
+        print("\nTransaction Details:")
+        print(f"Sender: {transaction['transaction']['sender']}")
+        print(f"Receiver: {transaction['transaction']['receiver']}")
+        print(f"Amount: {transaction['transaction']['amount']:,}")
         
-        results = {
-            'status': 'success',
-            'data': transaction
-        }
+        print("\nCore Metrics:")
+        metrics = transaction['quantum_metrics']
+        print(f"Power Distribution: {metrics['power_distribution_percentage']}%")
+        print(f"Hertz Precision: {metrics['hertz_precision']:.7f}")
+        print(f"Fraction Power: {metrics['fraction_power']:.3f}")
         
+        print("\nQuantum States (first 5):")
+        for value in metrics['values'][:5]:
+            print(f"\nState {value['index']}: {value['quantum_state']}")
+            print(f"Power Metrics: {value['metrics']['power_distribution']}")
+            print(f"Hertz Metrics: {value['metrics']['hertz_metrics']}")
+            print(f"Fraction Metrics: {value['metrics']['fraction_metrics']}")
+            
     except Exception as e:
-        results = {
-            'status': 'failed',
-            'error': str(e)
-        }
+        print(f"Transaction failed: {str(e)}")
     finally:
         vault.deactivate()
-        
-    
-    if results['status'] == 'success':
-        data = results['data']
-        print("\nTransaction Details:")
-        print(f"Sender: {data['transaction']['sender']}")
-        print(f"Receiver: {data['transaction']['receiver']}")
-        print(f"Amount: {data['transaction']['amount']:,}")
-        
-        print("\nQuantum Metrics:")
-        metrics = data['quantum_metrics']
-        print(f"Total Power Absorbed: {metrics['total_power_absorbed']:.4f}")
-        print(f"Total Energy Used: {metrics['total_energy_used']:.4f}")
-        print(f"Average Hertz: {metrics['average_hertz']:.7f}")
-        print(f"Power Distribution: {metrics['power_distribution_percentage']}%")
-        
-        print("\nDetailed Quantum Values:")
-        for value in metrics['values'][:5]:
-            print(f"\nIndex {value['index']}:")
-            print(f"  Absorption Power: {value['absorption']['power_absorbed']:.4f}")
-            print(f"  Energy Drain: {value['absorption']['energy_used']:.4f}")
-            print(f"  Hertz Effect: {value['distribution']['hertz']:.7f}")
-            print(f"  Quantum State: {value['quantum_state']}")
-    else:
-        print(f"Transaction failed: {results['error']}")
 
 if __name__ == "__main__":
-    execute_quantum_transaction()
+    execute_enhanced_transaction()
