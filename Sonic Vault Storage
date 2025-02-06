@@ -1,74 +1,114 @@
 import math
 import time
-import numpy as np
 from decimal import Decimal, getcontext
-import os
-import sys
-from contextlib import contextmanager
 from typing import Dict, List, Any
+
+getcontext().prec = 20
 
 class PowerDistributor:
     def __init__(self):
-        self.power_distribution = Decimal('400.00')
-        self._efficiency_factor = Decimal('0.95')
+        self._efficiency_factor = Decimal('0.95')  
         
-    def calculate_power_output(self, input_power: float) -> Dict[str, float]:
-        distributed_power = float(self.power_distribution * self._efficiency_factor)
+    def calculate_power_output(self, input_power: Decimal) -> Dict[str, Decimal]:
+        """Menghitung distribusi daya dengan efisiensi.
+        
+        Args:
+            input_power (Decimal): Daya input dalam watt.
+            
+        Returns:
+            Dict[str, Decimal]: distributed_power, efficiency
+        """
+        if input_power < Decimal('0'):
+            raise ValueError("Input power must be non-negative")
+            
+        distributed_power = input_power * self._efficiency_factor
         return {
             'distributed_power': distributed_power,
-            'efficiency': float(self._efficiency_factor * 100)
+            'efficiency': self._efficiency_factor * Decimal('100')
         }
 
 class HertzController:
     def __init__(self):
-        self.hertz_value = Decimal('0.0000010')
-        self.frequency_stability = Decimal('0.9999')
+        self.base_frequency = Decimal(0.0000010') 
+        self.frequency_stability = Decimal('0.9999')  
         
-    def calculate_frequency(self, time_delta: float) -> Dict[str, float]:
-        base_frequency = float(1 / self.hertz_value)
-        stability_factor = float(self.frequency_stability)
+    def calculate_frequency(self, time_delta: Decimal) -> Dict[str, Decimal]:
+        """Menghitung frekuensi terkalibrasi berdasarkan waktu.
+        
+        Args:
+            time_delta (Decimal): Delta waktu dalam detik.
+            
+        Returns:
+            Dict[str, Decimal]: frequency, stability
+        """
+        if time_delta <= Decimal('0'):
+            raise ValueError("Time delta must be positive")
+            
+        frequency = self.base_frequency * self.frequency_stability
         return {
-            'frequency': base_frequency * stability_factor,
-            'stability': stability_factor * 100
+            'frequency': frequency,
+            'stability': self.frequency_stability * Decimal('100')
         }
 
 class FractionPowerModule:
     def __init__(self):
-        # 2.625 Fraction Power
-        self.fraction_power = Decimal('2.625')
-        self.power_coefficient = Decimal('2.1')
+        self.power_coefficient = Decimal('2.625')  # Koefisien amplifikasi daya
         
-    def calculate_power(self, input_value: float) -> Dict[str, float]:
-        fraction_output = float(self.fraction_power * self.power_coefficient)
-        normalized_power = fraction_output / 11.0
+    def calculate_power(self, input_value: Decimal) -> Dict[str, Decimal]:
+        """Menghitung daya fraksional teramplifikasi.
+        
+        Args:
+            input_value (Decimal): Nilai input primer.
+            
+        Returns:
+            Dict[str, Decimal]: fraction_power, normalized_power
+        """
+        if input_value < Decimal('0'):
+            raise ValueError("Input value must be non-negative")
+            
+        fraction_output = input_value * self.power_coefficient
+        normalized_power = fraction_output / Decimal('11.0')
         return {
             'fraction_power': fraction_output,
             'normalized_power': normalized_power
         }
 
 class QuantumStateController:
-    def __init__(self, max_state: int = 1):
-        self.max_state = max_state
-        self._states = []
+    def __init__(self):
         self.power_distributor = PowerDistributor()
         self.hertz_controller = HertzController()
         self.fraction_module = FractionPowerModule()
         
-    def process_quantum_state(self, time_elapsed: float, input_power: float) -> Dict[str, Any]:
-        # Calculate all components
-        power_distribution = self.power_distributor.calculate_power_output(input_power)
+    def process_quantum_state(self, time_elapsed: Decimal, input_power: Decimal) -> Dict[str, Any]:
+        """Mengintegrasikan seluruh komponen untuk menghasilkan state kuantum.
+        
+        Args:
+            time_elapsed (Decimal): Waktu yang telah berlalu dalam detik.
+            input_power (Decimal): Daya input dalam watt.
+            
+        Returns:
+            Dict[str, Any]: Quantum state dan metrics
+        """
+        
+        if time_elapsed < Decimal('0'):
+            raise ValueError("Time elapsed must be non-negative")
+            
+        
+        power_metrics = self.power_distributor.calculate_power_output(input_power)
         hertz_metrics = self.hertz_controller.calculate_frequency(time_elapsed)
         fraction_metrics = self.fraction_module.calculate_power(input_power)
         
-        # Integrate results
-        quantum_state = int((power_distribution['distributed_power'] * 
-                           hertz_metrics['frequency'] * 
-                           fraction_metrics['fraction_power']) % 7)
+    
+        quantum_state = (
+            power_metrics['distributed_power'] *
+            hertz_metrics['frequency'] *
+            fraction_metrics['fraction_power']
+        ) % 7  
         
         return {
             'state': quantum_state,
             'metrics': {
-                'power_distribution': power_distribution,
+                'power_metrics': power_metrics,
                 'hertz_metrics': hertz_metrics,
                 'fraction_metrics': fraction_metrics
             }
@@ -77,86 +117,107 @@ class QuantumStateController:
 class EnhancedSonicVaultStorage:
     def __init__(self):
         self.state_controller = QuantumStateController()
-        self.max_math_floor = 2
-        getcontext().prec = 10
+        self._is_active = False
+        
+    def activate(self):
+        """Mengaktifkan sistem untuk memproses transaksi."""
+        self._is_active = True
+        
+    def deactivate(self):
+        """Menonaktifkan sistem."""
         self._is_active = False
         
     def process_transaction(self, sender: str, receiver: str, amount: int) -> Dict[str, Any]:
+        """Memproses transaksi dengan validasi ketat.
+        
+        Args:
+            sender (str): Pengirim aset.
+            receiver (str): Penerima aset.
+            amount (int): Jumlah aset.
+            
+        Returns:
+            Dict[str, Any]: Detail transaksi dan quantum metrics
+        """
         if not self._is_active:
             raise RuntimeError("System must be activated before processing")
             
-        start_time = time.time()
+        if not isinstance(amount, int) or amount <= 0:
+            raise ValueError("Amount must be a positive integer")
+            
+        start_time = Decimal(time.time())
         quantum_values = []
         
+        
         for i in range(18, 48):
-            if math.floor(i / 9_410_000 * 2) <= self.max_math_floor:
-                time_elapsed = time.time() - start_time
+            current_time = Decimal(time.time())
+            time_elapsed = current_time - start_time
+            
+            # Validasi matematika ketat
+            if math.floor(Decimal(i) / Decimal('9410000') * Decimal('2')) > 2:
+                continue  
                 
-                state_results = self.state_controller.process_quantum_state(
+            try:
+                state_result = self.state_controller.process_quantum_state(
                     time_elapsed=time_elapsed,
-                    input_power=float(i)
+                    input_power=Decimal(i)
                 )
-                
                 quantum_values.append({
                     'index': i,
-                    'quantum_state': state_results['state'],
-                    'metrics': state_results['metrics']
+                    'quantum_state': int(state_result['state']),
+                    'metrics': {
+                        'power': float(state_result['metrics']['power_metrics']['distributed_power']),
+                        'frequency': float(state_result['metrics']['hertz_metrics']['frequency']),
+                        'fraction': float(state_result['metrics']['fraction_metrics']['fraction_power'])
+                    }
                 })
-        
+            except Exception as e:
+                print(f"Error processing iteration {i}: {str(e)}")
+                continue
+                
         return {
             'transaction': {
                 'sender': sender,
                 'receiver': receiver,
                 'amount': amount,
-                'timestamp': start_time
+                'timestamp': float(start_time)
             },
-            'quantum_metrics': {
-                'values': quantum_values,
-                'power_distribution_percentage': float(self.state_controller.power_distributor.power_distribution),
-                'hertz_precision': float(self.state_controller.hertz_controller.hertz_value),
-                'fraction_power': float(self.state_controller.fraction_module.fraction_power)
-            }
+            'quantum_metrics': quantum_values
         }
-        
-    def activate(self):
-        self._is_active = True
-        
-    def deactivate(self):
-        self._is_active = False
 
 def execute_enhanced_transaction():
+    """Fungsi utama untuk menjalankan transaksi."""
     vault = EnhancedSonicVaultStorage()
     
     try:
         vault.activate()
-        transaction = vault.process_transaction(
+        print("System activated. Starting quantum transaction processing...")
+        
+        transaction_result = vault.process_transaction(
             sender="Alice",
             receiver="Bob",
             amount=1_000_000
         )
         
-        print("\nTransaction Details:")
-        print(f"Sender: {transaction['transaction']['sender']}")
-        print(f"Receiver: {transaction['transaction']['receiver']}")
-        print(f"Amount: {transaction['transaction']['amount']:,}")
         
-        print("\nCore Metrics:")
-        metrics = transaction['quantum_metrics']
-        print(f"Power Distribution: {metrics['power_distribution_percentage']}%")
-        print(f"Hertz Precision: {metrics['hertz_precision']:.7f}")
-        print(f"Fraction Power: {metrics['fraction_power']:.3f}")
+        print("\n=== Transaction Summary ===")
+        print(f"Sender: {transaction_result['transaction']['sender']}")
+        print(f"Receiver: {transaction_result['transaction']['receiver']}")
+        print(f"Amount: {transaction_result['transaction']['amount']:,}")
+        print(f"Timestamp: {transaction_result['transaction']['timestamp']:.6f}")
         
-        print("\nQuantum States (first 5):")
-        for value in metrics['values'][:5]:
-            print(f"\nState {value['index']}: {value['quantum_state']}")
-            print(f"Power Metrics: {value['metrics']['power_distribution']}")
-            print(f"Hertz Metrics: {value['metrics']['hertz_metrics']}")
-            print(f"Fraction Metrics: {value['metrics']['fraction_metrics']}")
+        print("\n=== Quantum States Analysis ===")
+        for state in transaction_result['quantum_metrics'][:5]:  # Tampilkan 5 pertama
+            print(f"\nQuantum State {state['index']}:")
+            print(f"State Code: {state['quantum_state']}")
+            print(f"Power Distribution: {state['metrics']['power']:.4f} W")
+            print(f"Frequency: {state['metrics']['frequency']:.2f} Hz")
+            print(f"Fraction Power: {state['metrics']['fraction']:.4f} FU")
             
     except Exception as e:
-        print(f"Transaction failed: {str(e)}")
+        print(f"\nCritical Error: {str(e)}")
     finally:
         vault.deactivate()
+        print("\nSystem safely deactivated.")
 
 if __name__ == "__main__":
     execute_enhanced_transaction()
