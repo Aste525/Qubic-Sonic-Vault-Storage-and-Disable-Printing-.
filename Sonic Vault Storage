@@ -7,7 +7,7 @@ getcontext().prec = 20
 
 class PowerDistributor:
     def __init__(self):
-        self._efficiency_factor = Decimal('0.95')  
+        self._efficiency_factor = Decimal('0.752')  
         
     def calculate_power_output(self, input_power: Decimal) -> Dict[str, Decimal]:
         """Menghitung distribusi daya dengan efisiensi.
@@ -29,7 +29,7 @@ class PowerDistributor:
 
 class HertzController:
     def __init__(self):
-        self.base_frequency = Decimal(0.0000010') 
+        self.base_frequency = Decimal('0.0000010') 
         self.frequency_stability = Decimal('0.9999')  
         
     def calculate_frequency(self, time_delta: Decimal) -> Dict[str, Decimal]:
@@ -52,7 +52,7 @@ class HertzController:
 
 class FractionPowerModule:
     def __init__(self):
-        self.power_coefficient = Decimal('2.625')  # Koefisien amplifikasi daya
+        self.power_coefficient = Decimal('2.625') 
         
     def calculate_power(self, input_value: Decimal) -> Dict[str, Decimal]:
         """Menghitung daya fraksional teramplifikasi.
@@ -152,7 +152,7 @@ class EnhancedSonicVaultStorage:
             current_time = Decimal(time.time())
             time_elapsed = current_time - start_time
             
-            # Validasi matematika ketat
+            
             if math.floor(Decimal(i) / Decimal('9410000') * Decimal('2')) > 2:
                 continue  
                 
@@ -206,7 +206,7 @@ def execute_enhanced_transaction():
         print(f"Timestamp: {transaction_result['transaction']['timestamp']:.6f}")
         
         print("\n=== Quantum States Analysis ===")
-        for state in transaction_result['quantum_metrics'][:5]:  # Tampilkan 5 pertama
+        for state in transaction_result['quantum_metrics'][:5]:  
             print(f"\nQuantum State {state['index']}:")
             print(f"State Code: {state['quantum_state']}")
             print(f"Power Distribution: {state['metrics']['power']:.4f} W")
